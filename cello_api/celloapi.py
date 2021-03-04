@@ -282,6 +282,7 @@ class CelloQuery:
         self.compiler_options = compiler_options
         self.input_ucf = input_ucf
         self.input_sensors = input_sensors
+        self.original_input_sensors = input_sensors
         self.output_device = output_device
         self.logging = logging
 
@@ -326,8 +327,12 @@ class CelloQuery:
                 docker_cmd, shell=True, stdout=subprocess.PIPE
             )
             if self.logging:
-                for line in iter(lambda: process.stdout.read(1), b""):
-                    sys.stdout.buffer.write(line)
+                try:
+                    for line in iter(lambda: process.stdout.read(1), b""):
+                        sys.stdout.buffer.write(line)
+                except AttributError:
+                    for line in iter(lambda: process.stdout.read(1), b""):
+                        sys.stdout.write(line)
             else:
                 print("Executing Cello Query... (This may take a moment)")
                 process.communicate()
@@ -421,6 +426,9 @@ class CelloQuery:
             self.input_sensors = output_filename
         return output_filename
 
+    def reset_input_signals(self):
+        self.input_sensors = self.original_input_sensors
+
     def check_for_prior_results(self) -> bool:
         """
         Checks to see if there are any prior results in the output directory
@@ -453,5 +461,8 @@ class CelloQuery:
             filter(lambda x: "prior_cello_result" not in x, active_files)
         )
         for file in active_files:
-            shutil.move(file, archive_dir)
+            try:
+                shutil.move(file, archive_dir)
+            except PermissionError:
+                print(f'Failed to move {file}')
         return archive_dir

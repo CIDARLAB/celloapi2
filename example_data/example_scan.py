@@ -1,12 +1,3 @@
-# Cello API 2
-CelloAPI2 is python interface for interacting with [Cellov2](https://github.com/CIDARLAB/Cello-v2), a CAD Tool for designing and scoring Genetic Circuits.
-
-Currently, this works by wrapping interactions with a Docker container in a number of user-friendly Python classes.
-
-## Usage Examples
-This is an example of attempting to determine the best AND circuit possible in an E. Coli Chassis.
-
-```
 from itertools import combinations
 from celloapi import CelloQuery, CelloResult
 
@@ -36,6 +27,7 @@ for chassis in chassis_name:
         input_ucf=in_ucf,
         input_sensors=input_sensor_file,
         output_device=output_device_file,
+        logging=True,
     )
     signals = q.get_input_signals()
     signal_pairing = list(combinations(signals, signal_input))
@@ -56,37 +48,5 @@ for chassis in chassis_name:
 print(f'Best Score: {best_score}')
 print(f'Best Chassis: {best_chassis}')
 print(f'Best Input Signals: {best_input_signals}')
-``` 
 
 
-# Installation
-## Requirements
-Prerequisites:
-[Docker](https://docs.docker.com/get-docker/)
-
-[Python 3.8+](https://www.python.org/downloads/)
-## Commands
-```
-$ docker pull cidarlab/cello-dnacompiler:latest
-
-$ pip install celloapi2
-```
-
-
-# CelloAPI2 requires a local input directory and a local output directory. The input directory contains the four primary inputs to the cello API:
-     - A Verilog File that describes the genetic circuit.
-     - A User-Constraint-File (UCF) that describes the target vector. 
-     - A file (*.input.json) that describes the input signals into the circuit.
-     - A file (*.output.json) that describes the resultant output signal at the end of the circuit. 
-# These files can be found in Cello-UCF. 
-
-```
-## Roadmap
-```
-1. Removal of Docker Requirement by adding API layer to Cello2
-Server that allows for arbitrary execution of Cello.
-
-2. Interactive Data Visualization Output for individual parts.
-
-3. Better Yosys/Eugene Interaction for re-ordering genetic circuits.
-```
