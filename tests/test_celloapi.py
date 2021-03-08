@@ -8,7 +8,7 @@ Written by W.R. Jackson <wrjackso@bu.edu>, DAMP Lab 2021
 import glob
 import os
 
-from cello_api.celloapi import CelloQuery, CelloResult
+from celloapi2.celloapi import CelloQuery, CelloResult
 
 
 def _make_cello_query():
