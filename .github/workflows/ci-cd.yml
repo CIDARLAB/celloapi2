@@ -1,0 +1,116 @@
+# Author: W.R. Jackson, DAMP/CIDAR Research Engineer
+
+
+
+# End Boilerplate
+
+on:
+  push:
+    branches:
+      - master
+      - feat/ci-and-cd
+
+name: Perform Tests on Available Platforms.
+
+jobs:
+  continuous-integration:
+    name: Perform Tests on Available Platforms
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: [3.8]
+        os: [ubuntu-18.04]
+    runs-on: ${{ matrix.os }}
+    steps:
+      # -----------------------------------------------------------------------
+      #   Check out the repository and setup our baseline Python environment
+      # -----------------------------------------------------------------------
+      - name: Checkout CelloAPI2 Repository
+        uses: actions/checkout@v2
+
+      - name: Set up our requested Python Version
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      # -----------------------------------------------------------------------
+      #   Install baseline Poetry, check for caching, and then install our env.
+      # -----------------------------------------------------------------------
+      - name: Install Poetry
+        uses: snok/install-poetry@v1.1.2
+        with:
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+
+      - name: Load Cached venv
+        id: cached-poetry-dependencies
+        uses: actions/cache@v2
+        with:
+          path: .venv
+          key: venv-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
+
+      - name: Install dependencies
+        if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+        run: poetry install --no-interaction --no-root
+
+      - name: Install library
+        run: poetry install --no-interaction
+      # -----------------------------------------------------------------------
+      #         Pulls the Cello Docker Image so we can run our tests.
+      # -----------------------------------------------------------------------
+      - name: Install Docker
+        uses: docker-practice/actions-setup-docker@master
+
+      - name: Test Docker Installation
+        run: |
+          set -x
+
+      - name: Pulldown Docker Image
+        run: |
+          docker pull cidarlab/cello-dnacompiler:latest
+
+      # -----------------------------------------------------------------------
+      #   Run our Tests. Implicit Failure will stop us from deploying to PyPi
+      # -----------------------------------------------------------------------
+      - name: Run tests
+        run: |
+          source .venv/bin/activate
+          pytest tests/
+
+  continuous-deployment:
+    name: Deploys validated libray to PyPi and triggers light messaging.
+    needs: continuous-integration
+    runs-on: ubuntu-latest
+    steps:
+      # -----------------------------------------------------------------------
+      #   Check out the repository and setup our baseline Python environment
+      # -----------------------------------------------------------------------
+      - name: Checkout CelloAPI2 Repository
+        uses: actions/checkout@v2
+      # -----------------------------------------------------------------------
+      #   Bump the Version of the Repository via Poetry, and then publish.
+      # -----------------------------------------------------------------------
+      - name: Install Poetry
+        uses: snok/install-poetry@v1.1.2
+        with:
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+
+      - name: Bump library and Publish.
+        run: |
+          poetry build
+          poetry version minor
+          poetry publish --build -u ${{ secrets.pypi_username }} -p ${{ secrets.pypi_password }}
+
+      # -----------------------------------------------------------------------
+      #                   Let Jackson know everything is cool.
+      # -----------------------------------------------------------------------
+      - name: Slack Notification
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_CHANNEL: general
+          SLACK_COLOR: ${{ job.status }}
+          SLACK_MESSAGE: 'Cello API v2 Deployed to PyPi :rocket:'
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+
+
+

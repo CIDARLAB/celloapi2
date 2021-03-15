@@ -67,7 +67,10 @@ def test_cleanup():
     out_dir = in_dir + "/dummy_output"
     files = glob.glob(f'{out_dir}/*')
     for file in files:
-        if os.path.isdir(file):
-            os.rmdir(file)
-        else:
-            os.remove(file)
+        try:
+            if os.path.isdir(file):
+                os.rmdir(file)
+            else:
+                os.remove(file)
+        except OSError:
+            print('Unable to delete files, please investigate.')
