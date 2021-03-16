@@ -37,7 +37,7 @@ def _make_cello_query():
 
 def test_cello_query():
     q = _make_cello_query()
-    res = q.get_results
+    res = q.get_results()
     assert res
 
 

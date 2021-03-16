@@ -319,7 +319,6 @@ class CelloQuery:
         if output == negative_check:
             raise RuntimeError("Docker not Found. Please install Docker. (https://docs.docker.com/get-docker/) ")
 
-    @property
     def get_results(self) -> int:
         """
         Primary Entrypoint for the library. Wraps calling the Cello Docker
