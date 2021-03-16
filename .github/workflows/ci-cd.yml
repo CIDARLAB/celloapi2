@@ -98,7 +98,7 @@ jobs:
       - name: Bump library and Publish.
         run: |
           poetry build
-          poetry version minor
+          poetry version patch
           poetry publish --build -u ${{ secrets.pypi_username }} -p ${{ secrets.pypi_password }}
 
       # -----------------------------------------------------------------------
