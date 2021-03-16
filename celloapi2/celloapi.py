@@ -29,10 +29,9 @@ import numpy as np
 import yaml
 
 
-
 def _fix_input_json(
-    input_fp: str,
-    final_trailing_comma: bool = False,
+        input_fp: str,
+        final_trailing_comma: bool = False,
 ) -> Union[List[Dict], Dict]:
     """
     Fixes some of the weird data output from Cello2 when it comes to marshalling
@@ -98,8 +97,8 @@ class CelloResult:
         self.circuit_score = self._parse_log_file()
 
     def _parse_result_csv(
-        self,
-        filename: str,
+            self,
+            filename: str,
     ) -> Dict[str, Any]:
         """
         Utility function to pull in a CSV and convert it into a dictionary where
@@ -115,7 +114,8 @@ class CelloResult:
             A dictionary composed of node label keys and whatever the requested
             data is.
         """
-        in_file = glob.glob(f"{self.output_dir}/*_{filename}.csv")
+        fp = os.path.join(f"{self.output_dir}", f"*_{filename}.csv")
+        in_file = glob.glob(fp)
         if not in_file:
             raise RuntimeError(
                 f"Unable to find {filename}.csv. Please check output directory."
@@ -245,16 +245,16 @@ class CelloResult:
 
 class CelloQuery:
     def __init__(
-        self,
-        input_directory: str = None,
-        output_directory: str = None,
-        verilog_file: str = None,
-        compiler_options: str = None,
-        input_ucf: str = None,
-        input_sensors: str = None,
-        output_device: str = None,
-        logging: bool = False,
-        archival: bool = True,
+            self,
+            input_directory: str = None,
+            output_directory: str = None,
+            verilog_file: str = None,
+            compiler_options: str = None,
+            input_ucf: str = None,
+            input_sensors: str = None,
+            output_device: str = None,
+            logging: bool = False,
+            archival: bool = True,
     ):
         """
         Class encapsulating all of the weirdness of interacting with Cello.
@@ -281,6 +281,7 @@ class CelloQuery:
                 docker container the prior results are moved to a new folder to
                 prevent clobbering. If false, we remove the previous results.
         """
+        self.check_dependencies()
         self.input_directory = input_directory
         self.output_directory = output_directory
         self.verilog_file = verilog_file
@@ -291,6 +292,32 @@ class CelloQuery:
         self.output_device = output_device
         self.logging = logging
         self.archival = archival
+
+    def check_dependencies(self):
+        output = None
+        negative_check = None
+        if sys.platform == "win32":
+            docker_check = f"docker"
+            output = subprocess.run(
+                [docker_check],
+                capture_output=True,
+                text=True,
+            ).stdout
+            negative_check = "'docker' is not recognized as an internal or external command, " \
+                             "operable program or batch file."
+        if sys.platform == "linux" or sys.platform == "darwin":
+            docker_check = f"docker"
+            output = subprocess.run(
+                [docker_check],
+                capture_output=True,
+                text=True,
+            ).stdout
+            negative_check = "The program 'docker' is currently not installed. You can install it by typing: " \
+                             "apt-get install docker"
+        if output is None or negative_check is None:
+            raise RuntimeError('Unable to detect Operating System, exiting.')
+        if output == negative_check:
+            raise RuntimeError("Docker not Found. Please install Docker. (https://docs.docker.com/get-docker/) ")
 
     @property
     def get_results(self) -> int:
@@ -402,10 +429,10 @@ class CelloQuery:
         return name_list
 
     def set_input_signals(
-        self,
-        input_signals: List[str],
-        output_filename: str = "custom_input.input.json",
-        mutate: bool = True,
+            self,
+            input_signals: List[str],
+            output_filename: str = "custom_input.input.json",
+            mutate: bool = True,
     ) -> str:
         """
         "Sets" the input signals for the circuit.
@@ -421,10 +448,10 @@ class CelloQuery:
         """
 
         def _prune_other_sensors(
-            suffix: str,
-            target_collection: str,
-            in_data: List[Dict],
-            in_signals: List[str],
+                suffix: str,
+                target_collection: str,
+                in_data: List[Dict],
+                in_signals: List[str],
         ):
             query_list = []
             for sig in in_signals:
