@@ -34,7 +34,7 @@ for chassis in chassis_name:
     for signal_set in signal_pairing:
         signal_set = list(signal_set)
         q.set_input_signals(signal_set)
-        q.get_results()
+        q.get_results
         try:
             res = CelloResult(out_dir=out_dir)
             if res.circuit_score > best_score:
