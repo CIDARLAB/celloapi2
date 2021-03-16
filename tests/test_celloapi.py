@@ -1,10 +1,10 @@
-'''
+"""
 --------------------------------------------------------------------------------
 Description:
 
 Written by W.R. Jackson <wrjackso@bu.edu>, DAMP Lab 2021
 --------------------------------------------------------------------------------
-'''
+"""
 import glob
 import os
 import sys
@@ -15,8 +15,8 @@ from celloapi2.celloapi import CelloQuery, CelloResult
 def _make_cello_query():
     dir_path = os.path.dirname(os.path.realpath(__file__))
     root_path = os.path.dirname(dir_path)
-    in_dir = os.path.join(root_path, 'example_data')
-    out_dir = os.path.join(in_dir, 'dummy_output')
+    in_dir = os.path.join(root_path, "example_data")
+    out_dir = os.path.join(in_dir, "dummy_output")
     v_file = "and.v"
     options = "options.csv"
     in_ucf = "Eco1C1G1T1.UCF.json"
@@ -51,8 +51,8 @@ def test_cello_query_input_selection():
 def test_cello_result():
     dir_path = os.path.dirname(os.path.realpath(__file__))
     root_path = os.path.dirname(dir_path)
-    in_dir = os.path.join(root_path, 'example_data')
-    out_dir = os.path.join(in_dir, 'dummy_output')
+    in_dir = os.path.join(root_path, "example_data")
+    out_dir = os.path.join(in_dir, "dummy_output")
     if not os.path.exists(out_dir):
         pass
     res = CelloResult(results_dir=out_dir)
@@ -68,7 +68,7 @@ def test_cleanup():
     root_path = os.path.dirname(dir_path)
     in_dir = root_path + "/example_data"
     out_dir = in_dir + "/dummy_output"
-    files = glob.glob(f'{out_dir}/*')
+    files = glob.glob(f"{out_dir}/*")
     for file in files:
         try:
             if os.path.isdir(file):
@@ -76,8 +76,8 @@ def test_cleanup():
             else:
                 os.remove(file)
         except OSError:
-            print('Unable to delete files, please investigate.')
+            print("Unable to delete files, please investigate.")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     test_cello_result()

@@ -30,8 +30,8 @@ import yaml
 
 
 def _fix_input_json(
-        input_fp: str,
-        final_trailing_comma: bool = False,
+    input_fp: str,
+    final_trailing_comma: bool = False,
 ) -> Union[List[Dict], Dict]:
     """
     Fixes some of the weird data output from Cello2 when it comes to marshalling
@@ -97,8 +97,8 @@ class CelloResult:
         self.circuit_score = self._parse_log_file()
 
     def _parse_result_csv(
-            self,
-            filename: str,
+        self,
+        filename: str,
     ) -> Dict[str, Any]:
         """
         Utility function to pull in a CSV and convert it into a dictionary where
@@ -195,11 +195,7 @@ class CelloResult:
                 [i for idx, i in enumerate(activity_values) if truth_table[idx]]
             )
             high_off = max(
-                [
-                    i
-                    for idx, i in enumerate(activity_values)
-                    if not truth_table[idx]
-                ]
+                [i for idx, i in enumerate(activity_values) if not truth_table[idx]]
             )
             score = math.log(low_on / high_off)
             score_dict[r_key] = score
@@ -245,16 +241,16 @@ class CelloResult:
 
 class CelloQuery:
     def __init__(
-            self,
-            input_directory: str = None,
-            output_directory: str = None,
-            verilog_file: str = None,
-            compiler_options: str = None,
-            input_ucf: str = None,
-            input_sensors: str = None,
-            output_device: str = None,
-            logging: bool = False,
-            archival: bool = True,
+        self,
+        input_directory: str = None,
+        output_directory: str = None,
+        verilog_file: str = None,
+        compiler_options: str = None,
+        input_ucf: str = None,
+        input_sensors: str = None,
+        output_device: str = None,
+        logging: bool = False,
+        archival: bool = True,
     ):
         """
         Class encapsulating all of the weirdness of interacting with Cello.
@@ -303,8 +299,10 @@ class CelloQuery:
                 capture_output=True,
                 text=True,
             ).stdout
-            negative_check = "'docker' is not recognized as an internal or external command, " \
-                             "operable program or batch file."
+            negative_check = (
+                "'docker' is not recognized as an internal or external command, "
+                "operable program or batch file."
+            )
         if sys.platform == "linux" or sys.platform == "darwin":
             docker_check = f"docker"
             output = subprocess.run(
@@ -312,12 +310,16 @@ class CelloQuery:
                 capture_output=True,
                 text=True,
             ).stdout
-            negative_check = "The program 'docker' is currently not installed. You can install it by typing: " \
-                             "apt-get install docker"
+            negative_check = (
+                "The program 'docker' is currently not installed. You can install it by typing: "
+                "apt-get install docker"
+            )
         if output is None or negative_check is None:
-            raise RuntimeError('Unable to detect Operating System, exiting.')
+            raise RuntimeError("Unable to detect Operating System, exiting.")
         if output == negative_check:
-            raise RuntimeError("Docker not Found. Please install Docker. (https://docs.docker.com/get-docker/) ")
+            raise RuntimeError(
+                "Docker not Found. Please install Docker. (https://docs.docker.com/get-docker/) "
+            )
 
     def get_results(self) -> int:
         """
@@ -363,28 +365,27 @@ class CelloQuery:
                 f"-outputDir /root/output"
             ]
         if sys.platform == "win32":
-            docker_cmd = \
-                f"docker run --rm " + \
-                f"-v {self.input_directory}:/root/input " + \
-                f"-v {self.output_directory}:/root/output" + \
-                f" -t cidarlab/cello-dnacompiler:latest java -classpath /root/app.jar " + \
-                f"org.cellocad.v2.DNACompiler.runtime.Main " + \
-                f"-inputNetlist /root/input/{self.verilog_file} " + \
-                f"-options /root/input/{self.compiler_options} " + \
-                f"-userConstraintsFile /root/input/{self.input_ucf} " + \
-                f"-inputSensorFile /root/input/{self.input_sensors} " + \
-                f"-outputDeviceFile /root/input/{self.output_device} " + \
-                f"-pythonEnv python " + \
-                f"-outputDir /root/output"
+            docker_cmd = (
+                f"docker run --rm "
+                + f"-v {self.input_directory}:/root/input "
+                + f"-v {self.output_directory}:/root/output"
+                + f" -t cidarlab/cello-dnacompiler:latest java -classpath /root/app.jar "
+                + f"org.cellocad.v2.DNACompiler.runtime.Main "
+                + f"-inputNetlist /root/input/{self.verilog_file} "
+                + f"-options /root/input/{self.compiler_options} "
+                + f"-userConstraintsFile /root/input/{self.input_ucf} "
+                + f"-inputSensorFile /root/input/{self.input_sensors} "
+                + f"-outputDeviceFile /root/input/{self.output_device} "
+                + f"-pythonEnv python "
+                + f"-outputDir /root/output"
+            )
         if docker_cmd is None:
             raise RuntimeError(
-                'Unable to detect proper operating system to create docker '
-                'subcommand stings. Please investigate.'
+                "Unable to detect proper operating system to create docker "
+                "subcommand stings. Please investigate."
             )
         try:
-            process = subprocess.Popen(
-                docker_cmd, shell=True, stdout=subprocess.PIPE
-            )
+            process = subprocess.Popen(docker_cmd, shell=True, stdout=subprocess.PIPE)
             if self.logging:
                 try:
                     for line in iter(lambda: process.stdout.read(1), b""):
@@ -428,10 +429,10 @@ class CelloQuery:
         return name_list
 
     def set_input_signals(
-            self,
-            input_signals: List[str],
-            output_filename: str = "custom_input.input.json",
-            mutate: bool = True,
+        self,
+        input_signals: List[str],
+        output_filename: str = "custom_input.input.json",
+        mutate: bool = True,
     ) -> str:
         """
         "Sets" the input signals for the circuit.
@@ -447,10 +448,10 @@ class CelloQuery:
         """
 
         def _prune_other_sensors(
-                suffix: str,
-                target_collection: str,
-                in_data: List[Dict],
-                in_signals: List[str],
+            suffix: str,
+            target_collection: str,
+            in_data: List[Dict],
+            in_signals: List[str],
         ):
             query_list = []
             for sig in in_signals:
@@ -470,12 +471,8 @@ class CelloQuery:
         # Once we're good we need to trim the input sensors to just what is
         # being used.
         data = _fix_input_json(f"{self.input_directory}/{self.input_sensors}")
-        data = _prune_other_sensors(
-            "_sensor", "input_sensors", data, input_signals
-        )
-        data = _prune_other_sensors(
-            "_sensor_model", "models", data, input_signals
-        )
+        data = _prune_other_sensors("_sensor", "input_sensors", data, input_signals)
+        data = _prune_other_sensors("_sensor_model", "models", data, input_signals)
         data = _prune_other_sensors(
             "_sensor_structure", "structures", data, input_signals
         )
@@ -523,7 +520,7 @@ class CelloQuery:
             try:
                 shutil.move(file, archive_dir)
             except PermissionError:
-                print(f'Failed to move {file}')
+                print(f"Failed to move {file}")
         return archive_dir
 
     def remove_prior_results(self):
@@ -538,4 +535,4 @@ class CelloQuery:
             try:
                 os.remove(file)
             except PermissionError:
-                print(f'Failed to delete {file}. Please check permissions')
+                print(f"Failed to delete {file}. Please check permissions")
