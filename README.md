@@ -8,9 +8,10 @@ This is an example of attempting to determine the best AND circuit possible in a
 
 ```
 from itertools import combinations
-from celloapi import CelloQuery, CelloResult
+from celloapi2 import CelloQuery, CelloResult
 
-# Set our directory variables
+# Set our directory variables. If you have a Windows based
+# operating system you need to input window based paths.
 in_dir = '/home/jackson/cello/input'
 out_dir = '/home/jackson/cello/output'
 v_file = 'and.v'
@@ -44,7 +45,7 @@ for chassis in chassis_name:
         q.set_input_signals(signal_set)
         q.get_results()
         try:
-            res = CelloResult(out_dir=out_dir)
+            res = CelloResult(results_dir=out_dir)
             if res.circuit_score > best_score:
                 best_score = res.circuit_score
                 best_chassis = chassis

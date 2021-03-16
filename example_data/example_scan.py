@@ -1,7 +1,8 @@
 from itertools import combinations
-from celloapi import CelloQuery, CelloResult
+from celloapi2 import CelloQuery, CelloResult
 
-# Set our directory variables
+# Set our directory variables. If you have a different OS then Linux you need
+# to input a valid Windows path.
 in_dir = '/home/jackson/cello/input'
 out_dir = '/home/jackson/cello/output'
 v_file = 'and.v'
@@ -34,9 +35,9 @@ for chassis in chassis_name:
     for signal_set in signal_pairing:
         signal_set = list(signal_set)
         q.set_input_signals(signal_set)
-        q.get_results
+        q.get_results()
         try:
-            res = CelloResult(out_dir=out_dir)
+            res = CelloResult(results_dir=out_dir)
             if res.circuit_score > best_score:
                 best_score = res.circuit_score
                 best_chassis = chassis
