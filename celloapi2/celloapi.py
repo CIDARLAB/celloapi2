@@ -114,7 +114,8 @@ class CelloResult:
             A dictionary composed of node label keys and whatever the requested
             data is.
         """
-        in_file = glob.glob(f"{self.output_dir}/*_{filename}.csv")
+        fp = os.path.join(f"{self.output_dir}", f"*_{filename}.csv")
+        in_file = glob.glob(fp)
         if not in_file:
             raise RuntimeError(
                 f"Unable to find {filename}.csv. Please check output directory."
@@ -194,11 +195,7 @@ class CelloResult:
                 [i for idx, i in enumerate(activity_values) if truth_table[idx]]
             )
             high_off = max(
-                [
-                    i
-                    for idx, i in enumerate(activity_values)
-                    if not truth_table[idx]
-                ]
+                [i for idx, i in enumerate(activity_values) if not truth_table[idx]]
             )
             score = math.log(low_on / high_off)
             score_dict[r_key] = score
@@ -253,6 +250,7 @@ class CelloQuery:
         input_sensors: str = None,
         output_device: str = None,
         logging: bool = False,
+        archival: bool = True,
     ):
         """
         Class encapsulating all of the weirdness of interacting with Cello.
@@ -275,7 +273,11 @@ class CelloQuery:
             logging: Optional. If true, when results are submitted the terminal
                 output from the docker container will be displayed in the
                 terminal.
+            archival: Optional. If true, when results are submitted to the
+                docker container the prior results are moved to a new folder to
+                prevent clobbering. If false, we remove the previous results.
         """
+        self.check_dependencies()
         self.input_directory = input_directory
         self.output_directory = output_directory
         self.verilog_file = verilog_file
@@ -285,11 +287,44 @@ class CelloQuery:
         self.original_input_sensors = input_sensors
         self.output_device = output_device
         self.logging = logging
+        self.archival = archival
+
+    def check_dependencies(self):
+        output = None
+        negative_check = None
+        if sys.platform == "win32":
+            docker_check = f"docker"
+            output = subprocess.run(
+                [docker_check],
+                capture_output=True,
+                text=True,
+            ).stdout
+            negative_check = (
+                "'docker' is not recognized as an internal or external command, "
+                "operable program or batch file."
+            )
+        if sys.platform == "linux" or sys.platform == "darwin":
+            docker_check = f"docker"
+            output = subprocess.run(
+                [docker_check],
+                capture_output=True,
+                text=True,
+            ).stdout
+            negative_check = (
+                "The program 'docker' is currently not installed. You can install it by typing: "
+                "apt-get install docker"
+            )
+        if output is None or negative_check is None:
+            raise RuntimeError("Unable to detect Operating System, exiting.")
+        if output == negative_check:
+            raise RuntimeError(
+                "Docker not Found. Please install Docker. (https://docs.docker.com/get-docker/) "
+            )
 
     def get_results(self) -> int:
         """
         Primary Entrypoint for the library. Wraps calling the Cello Docker
-        Container and takes care of all of the busywork neccesary to make
+        Container and takes care of all of the busywork necessary to make
         everything come together.
 
         Returns:
@@ -305,32 +340,57 @@ class CelloQuery:
         # Probably some check to see if the directories are being generated
         # properly.
         if self.check_for_prior_results():
-            print("Prior results detected, moving to prevent clobber.")
-            dest = self.archive_prior_results()
-            print(f"Prior results move to {dest}")
-        docker_cmd = [
-            f"docker run --rm "
-            f"-v {self.input_directory}:/root/input "
-            f"-v {self.output_directory}:/root/output"
-            f" -t cidarlab/cello-dnacompiler:latest java -classpath /root/app.jar "
-            f"org.cellocad.v2.DNACompiler.runtime.Main "
-            f"-inputNetlist /root/input/{self.verilog_file} "
-            f"-options /root/input/{self.compiler_options} "
-            f"-userConstraintsFile /root/input/{self.input_ucf} "
-            f"-inputSensorFile /root/input/{self.input_sensors} "
-            f"-outputDeviceFile /root/input/{self.output_device} "
-            f"-pythonEnv python "
-            f"-outputDir /root/output"
-        ]
-        try:
-            process = subprocess.Popen(
-                docker_cmd, shell=True, stdout=subprocess.PIPE
+            if self.archival:
+                print("Prior results detected, moving to prevent clobber.")
+                dest = self.archive_prior_results()
+                print(f"Prior results move to {dest}")
+            if not self.archival:
+                print("Prior results detected, removing prior results.")
+                self.remove_prior_results()
+                print(f"Prior results deleted.")
+        docker_cmd = None
+        if sys.platform == "linux" or sys.platform == "darwin":
+            docker_cmd = [
+                f"docker run --rm "
+                f"-v {self.input_directory}:/root/input "
+                f"-v {self.output_directory}:/root/output"
+                f" -t cidarlab/cello-dnacompiler:latest java -classpath /root/app.jar "
+                f"org.cellocad.v2.DNACompiler.runtime.Main "
+                f"-inputNetlist /root/input/{self.verilog_file} "
+                f"-options /root/input/{self.compiler_options} "
+                f"-userConstraintsFile /root/input/{self.input_ucf} "
+                f"-inputSensorFile /root/input/{self.input_sensors} "
+                f"-outputDeviceFile /root/input/{self.output_device} "
+                f"-pythonEnv python "
+                f"-outputDir /root/output"
+            ]
+        if sys.platform == "win32":
+            docker_cmd = (
+                f"docker run --rm "
+                + f"-v {self.input_directory}:/root/input "
+                + f"-v {self.output_directory}:/root/output"
+                + f" -t cidarlab/cello-dnacompiler:latest java -classpath /root/app.jar "
+                + f"org.cellocad.v2.DNACompiler.runtime.Main "
+                + f"-inputNetlist /root/input/{self.verilog_file} "
+                + f"-options /root/input/{self.compiler_options} "
+                + f"-userConstraintsFile /root/input/{self.input_ucf} "
+                + f"-inputSensorFile /root/input/{self.input_sensors} "
+                + f"-outputDeviceFile /root/input/{self.output_device} "
+                + f"-pythonEnv python "
+                + f"-outputDir /root/output"
             )
+        if docker_cmd is None:
+            raise RuntimeError(
+                "Unable to detect proper operating system to create docker "
+                "subcommand stings. Please investigate."
+            )
+        try:
+            process = subprocess.Popen(docker_cmd, shell=True, stdout=subprocess.PIPE)
             if self.logging:
                 try:
                     for line in iter(lambda: process.stdout.read(1), b""):
                         sys.stdout.buffer.write(line)
-                except AttributError:
+                except AttributeError:
                     for line in iter(lambda: process.stdout.read(1), b""):
                         sys.stdout.write(line)
             else:
@@ -411,12 +471,8 @@ class CelloQuery:
         # Once we're good we need to trim the input sensors to just what is
         # being used.
         data = _fix_input_json(f"{self.input_directory}/{self.input_sensors}")
-        data = _prune_other_sensors(
-            "_sensor", "input_sensors", data, input_signals
-        )
-        data = _prune_other_sensors(
-            "_sensor_model", "models", data, input_signals
-        )
+        data = _prune_other_sensors("_sensor", "input_sensors", data, input_signals)
+        data = _prune_other_sensors("_sensor_model", "models", data, input_signals)
         data = _prune_other_sensors(
             "_sensor_structure", "structures", data, input_signals
         )
@@ -452,8 +508,8 @@ class CelloQuery:
             The location that the prior results were move to.
 
         """
-        # TODO: Not sure how to do compression that's safe across all OSes.
-        archive_dir_name = f"prior_cello_result_{datetime.datetime.now()}"
+        time_string = datetime.datetime.now().strftime("%Y-%m-%d_%H.%M.%S")
+        archive_dir_name = f"prior_cello_result_{time_string}"
         archive_dir = f"{self.output_directory}/{archive_dir_name}"
         os.mkdir(archive_dir)
         active_files = glob.glob(f"{self.output_directory}/*")
@@ -464,5 +520,19 @@ class CelloQuery:
             try:
                 shutil.move(file, archive_dir)
             except PermissionError:
-                print(f'Failed to move {file}')
+                print(f"Failed to move {file}")
         return archive_dir
+
+    def remove_prior_results(self):
+        """
+        Removes prior results to prevent aggregation of files.
+        """
+        active_files = glob.glob(f"{self.output_directory}/*")
+        active_files = list(
+            filter(lambda x: "prior_cello_result" not in x, active_files)
+        )
+        for file in active_files:
+            try:
+                os.remove(file)
+            except PermissionError:
+                print(f"Failed to delete {file}. Please check permissions")
