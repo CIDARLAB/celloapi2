@@ -66,8 +66,7 @@ def _fix_input_json(
 
 class CelloResult:
     def __init__(self, results_dir: str):
-        """
-        High Level Class that encapsulates some of the oddities of
+        """High Level Class that encapsulates some of the oddities of
         recapitulating the necessary information from the Cello output
         documentation.
 
@@ -100,10 +99,9 @@ class CelloResult:
         self,
         filename: str,
     ) -> Dict[str, Any]:
-        """
-        Utility function to pull in a CSV and convert it into a dictionary where
-        the keys are the node labels and the values correspond to whichever CSV
-        is being requested.
+        """Utility function to pull in a CSV and convert it into a dictionary
+        where the keys are the node labels and the values correspond to
+        whichever CSV is being requested.
 
         Numpy CSV parsing is due to future optimization concerns.
 
@@ -137,10 +135,9 @@ class CelloResult:
         return mapping_keys
 
     def _map_symbolic_representation_to_true_name(self) -> Dict[str, str]:
-        """
-        All internal references in all of the Cello results reference everything
-        by it's associated verilog variable name, but that's not parsable by
-        human beings.
+        """All internal references in all of the Cello results reference
+        everything by it's associated verilog variable name, but that's not
+        parsable by human beings.
 
         This maps those variables to their human names.
 
@@ -149,7 +146,8 @@ class CelloResult:
             biological nomenclature, e.g. yfp_cassette, Phlf, etc.
 
         """
-        in_file = glob.glob(f"{self.output_dir}/*_outputNetlist.json")
+        fp = os.path.join(f'{self.output_dir}', '*_outputNetlist.json')
+        in_file = glob.glob(fp)
         if not in_file:
             raise RuntimeError(
                 "Unable to find Output Netlist. Please check output directory."
@@ -168,8 +166,7 @@ class CelloResult:
         return out_mapping
 
     def score_repressors(self) -> Dict[str, float]:
-        """
-        Scores all of the repressors in the genetic circuit according to the
+        """Scores all of the repressors in the genetic circuit according to the
         highest off and lowest on.
 
         Returns:
@@ -222,7 +219,8 @@ class CelloResult:
         """
         # This is probably a code smell, given that this information is vitally
         # important but only captures in a STDOUT Log. TODO, I suppose.
-        in_file = glob.glob(f"{self.output_dir}/*.log")
+        fp = os.path.join(f'{self.output_dir}', '*.log')
+        in_file = glob.glob(fp)
         if len(in_file) - 1:
             raise RuntimeError(
                 "Found multiple results matching pattern. Please investigate."
@@ -278,18 +276,44 @@ class CelloQuery:
                 prevent clobbering. If false, we remove the previous results.
         """
         self.check_dependencies()
-        self.input_directory = input_directory
-        self.output_directory = output_directory
+        self.input_directory = input_directory.lower()
+        self.output_directory = output_directory.lower()
         self.verilog_file = verilog_file
         self.compiler_options = compiler_options
         self.input_ucf = input_ucf
         self.input_sensors = input_sensors
         self.original_input_sensors = input_sensors
         self.output_device = output_device
+
         self.logging = logging
         self.archival = archival
 
-    def check_dependencies(self):
+    def check_paths(self):
+        dir_attributes = [
+            self.input_directory,
+            self.output_directory
+        ]
+        file_attributes = [
+            self.verilog_file,
+            self.compiler_options,
+            self.input_ucf,
+            self.input_sensors,
+            self.output_device,
+        ]
+        for directory in dir_attributes:
+            if not os.path.isdir(directory):
+                raise RuntimeError(
+                    f'Unable to find {directory}. Please Investigate.'
+                )
+        for file in file_attributes:
+            fp = os.path.join(self.input_directory, file)
+            if not os.path.isfile(fp):
+                raise RuntimeError(
+                    f'Unable to find {file}. Please Investigate.'
+                )
+
+    @staticmethod
+    def check_dependencies():
         output = None
         negative_check = None
         if sys.platform == "win32":
@@ -311,14 +335,16 @@ class CelloQuery:
                 text=True,
             ).stdout
             negative_check = (
-                "The program 'docker' is currently not installed. You can install it by typing: "
+                "The program 'docker' is currently not installed. You can "
+                "install it by typing: "
                 "apt-get install docker"
             )
         if output is None or negative_check is None:
             raise RuntimeError("Unable to detect Operating System, exiting.")
         if output == negative_check:
             raise RuntimeError(
-                "Docker not Found. Please install Docker. (https://docs.docker.com/get-docker/) "
+                "Docker not Found. Please install Docker. "
+                "(https://docs.docker.com/get-docker/) "
             )
 
     def get_results(self) -> int:
@@ -385,7 +411,10 @@ class CelloQuery:
                 "subcommand stings. Please investigate."
             )
         try:
-            process = subprocess.Popen(docker_cmd, shell=True, stdout=subprocess.PIPE)
+            process = subprocess.Popen(
+                docker_cmd,
+                shell=True,
+                stdout=subprocess.PIPE)
             if self.logging:
                 try:
                     for line in iter(lambda: process.stdout.read(1), b""):
@@ -415,7 +444,8 @@ class CelloQuery:
         Returns:
             A list of human readable input signals.
         """
-        data = _fix_input_json(f"{self.input_directory}/{self.input_sensors}")
+        sig_path = os.path.join(self.input_directory, self.input_sensors)
+        data = _fix_input_json(sig_path)
         # Each input sensor is represented by a disjoint triplet of
         # an input sensor datastructure, a model of that input sensor, and one
         # representing the structure.
@@ -483,6 +513,7 @@ class CelloQuery:
         return output_filename
 
     def reset_input_signals(self):
+        """Sets the input signals back to what they were originally."""
         self.input_sensors = self.original_input_sensors
 
     def check_for_prior_results(self) -> bool:
@@ -492,7 +523,8 @@ class CelloQuery:
         Returns:
             If there are prior results in the output directory.
         """
-        dir_contents = glob.glob(f"{self.output_directory}/*")
+        dir_path = os.path.join(f"{self.output_directory}", '*')
+        dir_contents = glob.glob(dir_path)
         dir_contents = list(
             filter(lambda x: "prior_cello_result" not in x, dir_contents)
         )
@@ -510,7 +542,7 @@ class CelloQuery:
         """
         time_string = datetime.datetime.now().strftime("%Y-%m-%d_%H.%M.%S")
         archive_dir_name = f"prior_cello_result_{time_string}"
-        archive_dir = f"{self.output_directory}/{archive_dir_name}"
+        archive_dir = os.path.join(self.output_directory, archive_dir_name)
         os.mkdir(archive_dir)
         active_files = glob.glob(f"{self.output_directory}/*")
         active_files = list(
@@ -527,7 +559,8 @@ class CelloQuery:
         """
         Removes prior results to prevent aggregation of files.
         """
-        active_files = glob.glob(f"{self.output_directory}/*")
+        fp = os.path.join(f'{self.output_directory}', '*')
+        active_files = glob.glob(fp)
         active_files = list(
             filter(lambda x: "prior_cello_result" not in x, active_files)
         )
