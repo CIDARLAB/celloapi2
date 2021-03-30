@@ -276,8 +276,11 @@ class CelloQuery:
                 prevent clobbering. If false, we remove the previous results.
         """
         self.check_dependencies()
-        self.input_directory = input_directory.lower()
-        self.output_directory = output_directory.lower()
+        if sys.platform == "win32":
+            input_directory = input_directory.lower()
+            output_directory = output_directory.lower()
+        self.input_directory = input_directory
+        self.output_directory = output_directory
         self.verilog_file = verilog_file
         self.compiler_options = compiler_options
         self.input_ucf = input_ucf
