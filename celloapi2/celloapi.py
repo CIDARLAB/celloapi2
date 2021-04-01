@@ -249,6 +249,7 @@ class CelloQuery:
         output_device: str = None,
         logging: bool = False,
         archival: bool = True,
+        dependency_check: bool = True,
     ):
         """
         Class encapsulating all of the weirdness of interacting with Cello.
@@ -274,8 +275,11 @@ class CelloQuery:
             archival: Optional. If true, when results are submitted to the
                 docker container the prior results are moved to a new folder to
                 prevent clobbering. If false, we remove the previous results.
+            dependency_check: Optional. Toggles a check to ensure the presence
+                of Docker for the purposes of simplifying the student workflow.
         """
-        self.check_dependencies()
+        if dependency_check:
+            self.check_dependencies()
         if sys.platform == "win32":
             input_directory = input_directory.lower()
             output_directory = output_directory.lower()
